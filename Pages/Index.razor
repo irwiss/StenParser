@@ -1,0 +1,44 @@
+﻿@page "/"
+
+@using System.Text.Json
+@inject ParserService parserService
+@inject IConfiguration configuration
+
+<PageTitle>Index</PageTitle>
+
+<div class="container" style="direction: rtl">
+    <div class="row">
+        @foreach((string group, int[] numbers) in parserService.CallGroups)
+        {
+            <div class="col" style="border: 1px #ccc solid; margin: 4px; padding: 0">
+                <div style="display: block; padding: 8px 8px; background-color: #eee;">@group</div>
+                <div style="display: block; padding: 0px 8px;">
+                    @foreach(int number in numbers)
+                    {
+                        <div style="display: block; white-space: pre; color: @(parserService.Answered.ContainsKey(number) ? "green" : "gray")"><span style="font-family: monospace">@number.ToString().PadRight(4)</span> @parserService.GetNumberAlias(number)</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+    <div class="row">
+        @AnswerCount()
+    </div>
+</div>
+
+@code {
+
+protected override void OnInitialized()
+{
+    parserService.OnParserUpdated += () => InvokeAsync(() => StateHasChanged());
+}
+
+private string AnswerCount()
+{
+    int total = parserService.CallGroups.SelectMany(cg => cg.Value).Distinct().Count();
+    int answered = parserService.Answered.Count;
+
+    return $"Answered {answered} / {total} || {answered * 100.0f / total:f0}%";
+}
+
+}

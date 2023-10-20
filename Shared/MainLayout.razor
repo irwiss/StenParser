@@ -1,0 +1,86 @@
+﻿@inherits LayoutComponentBase
+@inject ParserService parserService
+
+<PageTitle>StenParser</PageTitle>
+
+<div class="page">
+    <main>
+        <input type="button" class="btn btn-warning" style="position:fixed;bottom:0;left:0" value="🐛" @onclick="ToggleDebug" />
+
+        <div class="container @CollapseDebugClass">
+            <div class="row">
+                <div class="col">
+                    <div class="container">
+                        <form role="form">
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" @bind="TestInput1" />
+                                        <div class="input-group-btn">
+                                            <button type="button" class="btn btn-primary" @onclick="SendTest1">Send</button>
+                                        </div><!-- /btn-group -->
+                                    </div><!-- /input-group -->
+                                </div><!-- /.col-xs-12 -->
+                            </div><!-- /.row -->
+                        </form>
+                        <form role="form">
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" @bind="TestInput2" />
+                                        <div class="input-group-btn">
+                                            <button type="button" class="btn btn-primary" @onclick="SendTest2">Send</button>
+                                        </div><!-- /btn-group -->
+                                    </div><!-- /input-group -->
+                                </div><!-- /.col-xs-12 -->
+                            </div><!-- /.row -->
+                        </form>
+                    </div>
+                </div>
+                <div class="col">
+                    <textarea rows="@recentLines" cols="40" style="overflow: scroll;">@recent</textarea>
+                </div>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+public string CollapseDebugClass => collapseDebug ? "collapse" : "";
+
+private int recentLines = 20;
+private static bool collapseDebug = true;
+private string recent = string.Empty;
+private string TestInput1 = "0507 F171 F104 0000 0000";
+private string TestInput2 = "0507 F333 F900 0000 0000";
+
+protected override void OnInitialized()
+{
+    recent = string.Join("\n", parserService.RecentInputs.Take(recentLines));
+    parserService.OnParserUpdated += () => InvokeAsync(() =>
+    {
+        recent = string.Join("\n", parserService.RecentInputs.Take(recentLines));
+        StateHasChanged();
+    });
+}
+
+private void ToggleDebug()
+{
+    collapseDebug = !collapseDebug;
+}
+
+private void SendTest1()
+{
+    parserService.ParseLine(TestInput1);
+}
+
+private void SendTest2()
+{
+    parserService.ParseLine(TestInput2);
+}
+
+}
