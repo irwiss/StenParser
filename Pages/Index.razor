@@ -1,14 +1,12 @@
 ﻿@page "/"
 
-@using System.Text.Json
 @inject ParserService parserService
-@inject IConfiguration configuration
 
 <PageTitle>Index</PageTitle>
 
 <div class="container" style="direction: rtl">
     <div class="row">
-        @foreach((string group, int[] numbers) in parserService.CallGroups)
+        @foreach((string group, List<int> numbers) in parserService.Options.CallGroups)
         {
             <div class="col" style="border: 1px #ccc solid; margin: 4px; padding: 0">
                 <div style="display: block; padding: 8px 8px; background-color: #eee;">@group</div>
@@ -28,14 +26,24 @@
 
 @code {
 
+private void OnParserUpdated()
+{
+    InvokeAsync(() => StateHasChanged());
+}
+
 protected override void OnInitialized()
 {
-    parserService.OnParserUpdated += () => InvokeAsync(() => StateHasChanged());
+    parserService.OnParserUpdated += OnParserUpdated;
+}
+
+public void Dispose()
+{
+    parserService.OnParserUpdated -= OnParserUpdated;
 }
 
 private string AnswerCount()
 {
-    int total = parserService.CallGroups.SelectMany(cg => cg.Value).Distinct().Count();
+    int total = parserService.Options.CallGroups.SelectMany(cg => cg.Value).Distinct().Count();
     int answered = parserService.Answered.Count;
 
     return $"Answered {answered} / {total} || {answered * 100.0f / total:f0}%";

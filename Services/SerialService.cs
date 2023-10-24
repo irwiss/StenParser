@@ -2,20 +2,18 @@ using System.IO.Ports;
 
 public class SerialService : IHostedService
 {
-    private readonly ILogger<SerialService> _logger;
-    private readonly IConfiguration _configuration;
-    private readonly ParserService _parserService;
+    private readonly ILogger<SerialService> logger;
+    private readonly ParserService parserService;
 
-    public SerialService(ILogger<SerialService> logger, IConfiguration configuration, ParserService parserService)
+    public SerialService(ILogger<SerialService> logger, ParserService parserService)
     {
-        _logger = logger;
-        _configuration = configuration;
-        _parserService = parserService;
+        this.logger = logger;
+        this.parserService = parserService;
     }
 
     public Task StartAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Serial Hosted Service starting.");
+        logger.LogInformation("Serial Hosted Service starting.");
         _ = Task.Run(() => StartReading(stoppingToken), stoppingToken);
         return Task.CompletedTask;
     }
@@ -26,13 +24,8 @@ public class SerialService : IHostedService
         {
             try
             {
-                using SerialPort _serial = new SerialPort();
-                string? portName = _configuration.GetValue<string>("SerialPort");
-                if (string.IsNullOrWhiteSpace(portName))
-                {
-                    throw new ArgumentException($"SerialPort '{portName}' is not valid");
-                }
-                _serial.PortName = portName;
+                using SerialPort _serial = new();
+                _serial.PortName = parserService.Options.SerialPortName;
                 _serial.BaudRate = 9600;
                 _serial.Parity = Parity.Even;
                 _serial.DataBits = 7;
@@ -42,7 +35,7 @@ public class SerialService : IHostedService
                 _serial.Open();
                 _serial.DiscardOutBuffer();
                 _serial.DiscardInBuffer();
-                _logger.LogInformation("Serial opened '{port}'", portName);
+                logger.LogInformation("Serial opened '{port}'", _serial.PortName);
                 while(_serial.IsOpen)
                 {
                     string line = _serial.ReadLine()
@@ -55,22 +48,22 @@ public class SerialService : IHostedService
                     {
                         continue;
                     }
-                    _parserService.ParseLine(line);
+                    parserService.ParseLine(line);
                 }
             }
             catch(Exception ex)
             {
-                _logger.LogError(ex, "Serial: Exception.");
+                logger.LogError(ex, "Serial: Exception.");
             }
             finally
             {
-                _logger.LogInformation("Closing serial port");
+                logger.LogInformation("Closing serial port");
             }
             if(!cancellationToken.IsCancellationRequested)
             {
                 TimeSpan waitTime = TimeSpan.FromSeconds(10);
                 // wait before trying to reopen
-                _logger.LogInformation("Waiting {timespan} before retrying.", waitTime.ToString());
+                logger.LogInformation("Waiting {timespan} before retrying.", waitTime.ToString());
                 await Task.Delay(waitTime, cancellationToken);
             }
         }
@@ -78,7 +71,7 @@ public class SerialService : IHostedService
 
     public Task StopAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Serial Hosted Service is stopping.");
+        logger.LogInformation("Serial Hosted Service is stopping.");
         return Task.CompletedTask;
     }
 }

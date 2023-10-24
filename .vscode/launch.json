@@ -10,10 +10,13 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/net6.0/StenParser.dll",
+            "program": "${workspaceFolder}/bin/Debug/net7.0/linux-x64/StenParser.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
+            "launchBrowser": {
+                "enabled": false
+            },
             // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
             "serverReadyAction": {
                 "action": "openExternally",

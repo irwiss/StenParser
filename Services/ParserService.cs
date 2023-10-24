@@ -1,34 +1,34 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Options;
 
 public class ParserService
 {
     public event Action? OnParserUpdated;
 
-    public int CurrentGroup { get; private set; }
-    public Dictionary<string, int[]> CallGroups { get; private set; }= new();
-    public Dictionary<int, string> NumberAliases { get; } = new();
+    public StenParserOptions Options { get; private set; } = new();
     public Dictionary<int, DateTimeOffset> Answered { get; } = new();
-    public HashSet<string> AnswerCodes { get; } = new();
-    public HashSet<string> BroadcastCodes { get; } = new();
+    public Dictionary<int, string> NumberAliases { get; } = new();
     public List<string> RecentInputs { get; } = new();
 
-    private readonly ILogger<ParserService> _logger;
-    private readonly IConfiguration _configuration;
-    
+    private readonly ILogger<ParserService> logger;
+    private readonly IOptionsMonitor<StenParserOptions> optionsMonitor;
     private DateTimeOffset lastBroadcastTime = DateTimeOffset.Now;
     private int lastBroadcastNum = 0;
+    private readonly HashSet<string> answerCodeStrings = new();
+    private readonly HashSet<string> broadcastCodeStrings = new();
 
-    public ParserService(ILogger<ParserService> logger, IConfiguration configuration)
+    private const string aliasesFilename = "aliases.csv";
+
+    public ParserService(ILogger<ParserService> logger, IOptionsMonitor<StenParserOptions> optionsMonitor)
     {
-        _logger = logger;
-        _configuration = configuration;
+        this.logger = logger;
+        this.optionsMonitor = optionsMonitor;
 
-        if (File.Exists("aliases.csv"))
+        if (File.Exists(aliasesFilename))
         {
-            using var reader = new StreamReader("aliases.csv");
+            using StreamReader reader = new(aliasesFilename);
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 Encoding = System.Text.Encoding.UTF8,
@@ -37,42 +37,31 @@ public class ParserService
             using var csv = new CsvReader(reader, config);
             NumberAliases = csv.GetRecords<NumberAliasModel>()
                 .ToDictionary(x => x.Number, x => x.Alias);
-        } else
-        {
-            logger.LogWarning("Couldn't find aliases.csv file to load number aliases from");
+        } else {
+            logger.LogWarning($"Couldn't find '{aliasesFilename}', no number aliases loaded.");
         }
 
-        configuration.GetReloadToken().RegisterChangeCallback(state =>
-        {
-            ReloadGroups();
-        }, null);
-        ReloadGroups();
-
-        ParseNumbersFromConfiguration(BroadcastCodes, "Broadcasts");
-        ParseNumbersFromConfiguration(AnswerCodes, "AnswerCodes");
-
-        // logger.LogInformation("Aliases: {NumberAliases}", NumberAliases);
-        logger.LogInformation("Listening for broadcast numbers: {BroadcastCodes}", BroadcastCodes);
-        logger.LogInformation("Listening for expected answer numbers: {AnswerCodes}", AnswerCodes);
-
-        ChangeToken.OnChange(() => _configuration.GetReloadToken(), ReloadGroups);
-        ReloadGroups();
+        this.optionsMonitor.OnChange(ReloadOptions);
+        ReloadOptions(this.optionsMonitor.CurrentValue);
     }
 
-    private void ReloadGroups()
+    private void ReloadOptions(StenParserOptions options)
     {
-        CallGroups = _configuration.GetSection("CallGroups").Get<Dictionary<string, int[]>>() ?? new Dictionary<string, int[]>();
+        Options = options;
+
+        void ConvertNumbersToCodeStrings(HashSet<string> destination, List<int> nums)
+        {
+            nums.ForEach(num => destination.Add(num.ToString().PadLeft(4, 'F')));
+        }
+
+        ConvertNumbersToCodeStrings(broadcastCodeStrings, options.BroadcastCodes);
+        ConvertNumbersToCodeStrings(answerCodeStrings, options.AnswerCodes);
+
+        logger.LogInformation("Listening for broadcast strings: {BroadcastCodeStrings}", broadcastCodeStrings);
+        logger.LogInformation("Listening for expected answer strings: {AnswerCodeStrings}", answerCodeStrings);
+
         OnParserUpdated?.Invoke();
-        _logger.LogWarning("Configuration reload token triggered.");
-    }
-
-    private void ParseNumbersFromConfiguration(HashSet<string> destination, string section)
-    {
-        int[]? nums = _configuration.GetSection(section).Get<int[]>();
-        foreach (int num in nums ?? Array.Empty<int>())
-        {
-            destination.Add(num.ToString().PadLeft(4, 'F'));
-        }
+        logger.LogWarning("Configuration reloaded.");
     }
 
     public void ParseLine(string line)
@@ -86,21 +75,21 @@ public class ParserService
         string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 5)
         {
-            _logger.LogDebug("Line '{line}' can't be split to 5 parts via whitespace", line);
+            logger.LogDebug("Line '{line}' can't be split to 5 parts via whitespace", line);
             return; // ignore
         }
-        _logger.LogInformation("Parse Input: '{line}'", line);
-        if (AnswerCodes.Contains(parts[2]) && parts[0].StartsWith("05"))
+        logger.LogInformation("Parse Input: '{line}'", line);
+        if (answerCodeStrings.Contains(parts[2]) && parts[0].StartsWith("05"))
         {
             if (!int.TryParse(parts[2].Replace("F", ""), out int target))
             {
-                _logger.LogWarning("Couldn't parse target from '{line}'", line);
+                logger.LogWarning("Couldn't parse target from '{line}'", line);
             }
             else
             {
                 if(!int.TryParse(parts[1].Replace("F", ""), out int from))
                 {
-                    _logger.LogWarning("Couldn't parse caller from '{line}'", line);
+                    logger.LogWarning("Couldn't parse caller from '{line}'", line);
                 }
                 else
                 {
@@ -108,26 +97,26 @@ public class ParserService
                     {
                         OnParserUpdated?.Invoke();
                         SaveCurrentState();
-                        _logger.LogInformation("Call from '{from}' to '{to}'", from, target);
+                        logger.LogInformation("Call from '{from}' to '{to}'", from, target);
                     }
                     else
                     {
-                        _logger.LogWarning("Duplicate call from '{from}' to '{to}'", from, target);
+                        logger.LogWarning("Duplicate call from '{from}' to '{to}'", from, target);
                     }
                 }
             }
         }
-        if (BroadcastCodes.Contains(parts[2]))
+        if (broadcastCodeStrings.Contains(parts[2]))
         {
             if (!int.TryParse(parts[2].Replace("F", ""), out int target))
             {
-                _logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
+                logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
             }
             else
             {
                 if (!int.TryParse(parts[1].Replace("F", ""), out int from))
                 {
-                    _logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
+                    logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
                 }
                 else
                 {
@@ -136,7 +125,7 @@ public class ParserService
                     lastBroadcastNum = target;
                     SaveCurrentState();
                     OnParserUpdated?.Invoke();
-                    _logger.LogInformation("Broadcast from '{from}' to '{target}'", from, target);
+                    logger.LogInformation("Broadcast from '{from}' to '{target}'", from, target);
                 }
             }
         }
@@ -145,7 +134,7 @@ public class ParserService
     private void SaveCurrentState()
     {
         string res = $"Broadcast test to {lastBroadcastNum} started at {lastBroadcastTime:yy-MM-dd HH:mm:ss}\n\n";
-        foreach(var (num, when) in Answered.OrderBy(x => x.Value)) {
+        foreach((int num, DateTimeOffset when) in Answered.OrderBy(x => x.Value)) {
             res += $"{num} answered at {when.ToLocalTime():yy-MM-dd HH:mm:ss}\n";
         }
         string dateString = lastBroadcastTime.ToString("yyyy-MM-dd HH-mm-ss");

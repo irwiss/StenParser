@@ -15,6 +15,7 @@ builder.Host.UseSerilog((hostContext, services, loggerConfiguration) =>
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.Configure<StenParserOptions>(builder.Configuration);
 builder.Services.AddSingleton<ParserService>();
 builder.Services.AddSingleton<SerialService>();
 builder.Services.AddSingleton<IHostedService, SerialService>(sp => sp.GetService<SerialService>()!);
