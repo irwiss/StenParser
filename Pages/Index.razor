@@ -6,7 +6,7 @@
 
 <div class="container" style="direction: rtl">
     <div class="row">
-        @foreach((string group, List<int> numbers) in parserService.Options.CallGroups)
+        @foreach((string group, HashSet<int> numbers) in parserService.Options.CallGroups)
         {
             <div class="col" style="border: 1px #ccc solid; margin: 4px; padding: 0">
                 <div style="display: block; padding: 8px 8px; background-color: #eee;">@group</div>

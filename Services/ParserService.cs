@@ -18,8 +18,6 @@ namespace StenParser
         private readonly IOptionsMonitor<StenParserOptions> optionsMonitor;
         private DateTimeOffset lastBroadcastTime = DateTimeOffset.Now;
         private int lastBroadcastNum = 0;
-        private readonly HashSet<string> answerCodeStrings = new();
-        private readonly HashSet<string> broadcastCodeStrings = new();
 
         private const string aliasesFilename = "aliases.csv";
 
@@ -51,19 +49,16 @@ namespace StenParser
         {
             Options = options;
 
-            void ConvertNumbersToCodeStrings(HashSet<string> destination, List<int> nums)
-            {
-                nums.ForEach(num => destination.Add(num.ToString().PadLeft(4, 'F')));
-            }
-
-            ConvertNumbersToCodeStrings(broadcastCodeStrings, options.BroadcastCodes);
-            ConvertNumbersToCodeStrings(answerCodeStrings, options.AnswerCodes);
-
-            logger.LogInformation("Listening for broadcast strings: {BroadcastCodeStrings}", broadcastCodeStrings);
-            logger.LogInformation("Listening for expected answer strings: {AnswerCodeStrings}", answerCodeStrings);
+            logger.LogInformation("Listening for broadcast strings: {BroadcastCodes}", options.BroadcastCodes);
+            logger.LogInformation("Listening for expected answer strings: {AnswerCodes}", options.AnswerCodes);
 
             OnParserUpdated?.Invoke();
             logger.LogWarning("Configuration reloaded.");
+        }
+
+        private static bool TryParseStenNumber(string input, out int number)
+        {
+            return int.TryParse(input.TrimStart('F'), out number);
         }
 
         public void ParseLine(string line)
@@ -81,55 +76,39 @@ namespace StenParser
                 return; // ignore
             }
             logger.LogInformation("Parse Input: '{line}'", line);
-            if (answerCodeStrings.Contains(parts[2]) && parts[0].StartsWith("05"))
+            if (!parts[0].StartsWith("05"))
             {
-                if (!int.TryParse(parts[2].Replace("F", ""), out int target))
-                {
-                    logger.LogWarning("Couldn't parse target from '{line}'", line);
-                }
-                else
-                {
-                    if(!int.TryParse(parts[1].Replace("F", ""), out int from))
-                    {
-                        logger.LogWarning("Couldn't parse caller from '{line}'", line);
-                    }
-                    else
-                    {
-                        if (Answered.TryAdd(from, DateTimeOffset.UtcNow))
-                        {
-                            OnParserUpdated?.Invoke();
-                            SaveCurrentState();
-                            logger.LogInformation("Call from '{from}' to '{to}'", from, target);
-                        }
-                        else
-                        {
-                            logger.LogWarning("Duplicate call from '{from}' to '{to}'", from, target);
-                        }
-                    }
-                }
+                return; // ignore anything but calls
             }
-            if (broadcastCodeStrings.Contains(parts[2]))
+
+            if (!TryParseStenNumber(parts[1], out int source))
             {
-                if (!int.TryParse(parts[2].Replace("F", ""), out int target))
-                {
-                    logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
-                }
-                else
-                {
-                    if (!int.TryParse(parts[1].Replace("F", ""), out int from))
-                    {
-                        logger.LogWarning("Couldn't parse broadcast from '{line}'", line);
-                    }
-                    else
-                    {
-                        Answered.Clear();
-                        lastBroadcastTime = DateTimeOffset.Now;
-                        lastBroadcastNum = target;
-                        SaveCurrentState();
-                        OnParserUpdated?.Invoke();
-                        logger.LogInformation("Broadcast from '{from}' to '{target}'", from, target);
-                    }
-                }
+                logger.LogWarning("Couldn't parse source number from '{line}'", line);
+            }
+            if (!TryParseStenNumber(parts[2], out int target))
+            {
+                logger.LogWarning("Couldn't parse target number from '{line}'", line);
+            }
+
+            if (Options.AnswerCodes.Contains(target) && Answered.TryAdd(source, DateTimeOffset.UtcNow))
+            {
+                OnParserUpdated?.Invoke();
+                SaveCurrentState();
+                logger.LogInformation("Call from '{source}' to '{target}'", source, target);
+            }
+            else
+            {
+                logger.LogWarning("Duplicate call from '{source}' to '{target}'", source, target);
+            }
+
+            if (Options.BroadcastCodes.Contains(target))
+            {
+                Answered.Clear();
+                lastBroadcastTime = DateTimeOffset.Now;
+                lastBroadcastNum = target;
+                SaveCurrentState();
+                OnParserUpdated?.Invoke();
+                logger.LogInformation("Broadcast from '{source}' to '{target}'", source, target);
             }
         }
 
