@@ -20,16 +20,14 @@ namespace StenParser
         private DateTimeOffset lastBroadcastTime = DateTimeOffset.Now;
         private int lastBroadcastNum = 0;
 
-        private const string aliasesFilename = "aliases.csv";
-
         public ParserService(ILogger<ParserService> logger, IOptionsMonitor<StenParserOptions> optionsMonitor)
         {
             this.logger = logger;
             this.optionsMonitor = optionsMonitor;
 
-            if (File.Exists(aliasesFilename))
+            if (File.Exists(Options.AliasesFilename))
             {
-                using StreamReader reader = new(aliasesFilename);
+                using StreamReader reader = new(Options.AliasesFilename);
                 var config = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
                     Encoding = System.Text.Encoding.UTF8,
@@ -39,7 +37,7 @@ namespace StenParser
                 NumberAliases = csv.GetRecords<NumberAliasModel>()
                     .ToDictionary(x => x.Number, x => x.Alias);
             } else {
-                logger.LogWarning($"Couldn't find '{aliasesFilename}', no number aliases loaded.");
+                logger.LogWarning("'{AliasesFilename}' is missing, no number aliases loaded.", Options.AliasesFilename);
             }
 
             this.optionsMonitor.OnChange(ReloadOptions);
@@ -115,8 +113,13 @@ namespace StenParser
             }
             else if (Options.AlertCodes.Contains(target))
             {
-                logger.LogWarning("Alert triggered from {Source} to {target}", source, target);
-                OnAlertDial?.Invoke(source, target);
+                try {
+                    File.AppendAllText(Options.AlertsLogFilename, $"Alert triggered from {source} to {target} at {DateTimeOffset.Now:yy-MM-dd HH:mm:ss}{Environment.NewLine}");
+                    OnAlertDial?.Invoke(source, target);
+                    logger.LogWarning("Alert triggered from {source} to {target}", source, target);
+                } catch (Exception ex) {
+                    logger.LogError(ex, "Couldn't log alert to file.");
+                }
             }
         }
 
@@ -127,8 +130,8 @@ namespace StenParser
                 res += $"{num} answered at {when.ToLocalTime():yy-MM-dd HH:mm:ss}\n";
             }
             string dateString = lastBroadcastTime.ToString("yyyy-MM-dd HH-mm-ss");
-            res = res.Replace("\n", "\r\n");
-            File.WriteAllText($"broadcast {dateString} to {lastBroadcastNum}.txt", res);
+            res = res.Replace("\n", Environment.NewLine);
+            File.WriteAllText($"Broadcast {dateString} to {lastBroadcastNum}.txt", res);
         }
 
         public string GetNumberAlias(int number)
