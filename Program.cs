@@ -1,4 +1,5 @@
 using Serilog;
+using StenParser;
 
 var builder = WebApplication.CreateBuilder(args);
 

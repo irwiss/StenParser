@@ -1,77 +1,80 @@
 using System.IO.Ports;
 
-public class SerialService : IHostedService
+namespace StenParser
 {
-    private readonly ILogger<SerialService> logger;
-    private readonly ParserService parserService;
-
-    public SerialService(ILogger<SerialService> logger, ParserService parserService)
+    public class SerialService : IHostedService
     {
-        this.logger = logger;
-        this.parserService = parserService;
-    }
+        private readonly ILogger<SerialService> logger;
+        private readonly ParserService parserService;
 
-    public Task StartAsync(CancellationToken stoppingToken)
-    {
-        logger.LogInformation("Serial Hosted Service starting.");
-        _ = Task.Run(() => StartReading(stoppingToken), stoppingToken);
-        return Task.CompletedTask;
-    }
-
-    private async void StartReading(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
+        public SerialService(ILogger<SerialService> logger, ParserService parserService)
         {
-            try
+            this.logger = logger;
+            this.parserService = parserService;
+        }
+
+        public Task StartAsync(CancellationToken stoppingToken)
+        {
+            logger.LogInformation("Serial Hosted Service starting.");
+            _ = Task.Run(() => StartReading(stoppingToken), stoppingToken);
+            return Task.CompletedTask;
+        }
+
+        private async void StartReading(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
             {
-                using SerialPort _serial = new();
-                _serial.PortName = parserService.Options.SerialPortName;
-                _serial.BaudRate = 9600;
-                _serial.Parity = Parity.Even;
-                _serial.DataBits = 7;
-                _serial.StopBits = StopBits.Two;
-                _serial.Handshake = Handshake.None;
-                _serial.Encoding = System.Text.Encoding.ASCII;
-                _serial.Open();
-                _serial.DiscardOutBuffer();
-                _serial.DiscardInBuffer();
-                logger.LogInformation("Serial opened '{port}'", _serial.PortName);
-                while(_serial.IsOpen)
+                try
                 {
-                    string line = _serial.ReadLine()
-                        .TrimStart('\0')
-                        .TrimEnd('\n')
-                        .TrimEnd('\r')
-                        .TrimEnd(' ');
-                    // _logger.LogInformation("{ll}", BitConverter.ToString(System.Text.Encoding.ASCII.GetBytes(line)));
-                    if (string.IsNullOrWhiteSpace(line))
+                    using SerialPort _serial = new();
+                    _serial.PortName = parserService.Options.SerialPortName;
+                    _serial.BaudRate = 9600;
+                    _serial.Parity = Parity.Even;
+                    _serial.DataBits = 7;
+                    _serial.StopBits = StopBits.Two;
+                    _serial.Handshake = Handshake.None;
+                    _serial.Encoding = System.Text.Encoding.ASCII;
+                    _serial.Open();
+                    _serial.DiscardOutBuffer();
+                    _serial.DiscardInBuffer();
+                    logger.LogInformation("Serial opened '{port}'", _serial.PortName);
+                    while (_serial.IsOpen)
                     {
-                        continue;
+                        string line = _serial.ReadLine()
+                            .TrimStart('\0')
+                            .TrimEnd('\n')
+                            .TrimEnd('\r')
+                            .TrimEnd(' ');
+                        // _logger.LogInformation("{ll}", BitConverter.ToString(System.Text.Encoding.ASCII.GetBytes(line)));
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            continue;
+                        }
+                        parserService.ParseLine(line);
                     }
-                    parserService.ParseLine(line);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Serial: Exception.");
+                }
+                finally
+                {
+                    logger.LogInformation("Closing serial port");
+                }
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    TimeSpan waitTime = TimeSpan.FromSeconds(10);
+                    // wait before trying to reopen
+                    logger.LogInformation("Waiting {timespan} before retrying.", waitTime.ToString());
+                    await Task.Delay(waitTime, cancellationToken);
                 }
             }
-            catch(Exception ex)
-            {
-                logger.LogError(ex, "Serial: Exception.");
-            }
-            finally
-            {
-                logger.LogInformation("Closing serial port");
-            }
-            if(!cancellationToken.IsCancellationRequested)
-            {
-                TimeSpan waitTime = TimeSpan.FromSeconds(10);
-                // wait before trying to reopen
-                logger.LogInformation("Waiting {timespan} before retrying.", waitTime.ToString());
-                await Task.Delay(waitTime, cancellationToken);
-            }
         }
-    }
 
-    public Task StopAsync(CancellationToken stoppingToken)
-    {
-        logger.LogInformation("Serial Hosted Service is stopping.");
-        return Task.CompletedTask;
+        public Task StopAsync(CancellationToken stoppingToken)
+        {
+            logger.LogInformation("Serial Hosted Service is stopping.");
+            return Task.CompletedTask;
+        }
     }
 }
