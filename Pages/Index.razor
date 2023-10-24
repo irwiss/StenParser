@@ -4,8 +4,26 @@
 
 <PageTitle>Index</PageTitle>
 
-<div class="container" style="direction: rtl">
-    <div class="row">
+<div class="container">
+    @foreach (int alertCode in parserService.Options.AlertCodes)
+    {
+        <div class="alert alert-warning @AlertContainerClass(alertCode)" role="alert">
+            Last alerts for code @alertCode:<br/>
+            @if (alertCodeTimes.TryGetValue(alertCode, out List<(int, DateTimeOffset)>? alertTimes))
+            {
+                @foreach ((int source, DateTimeOffset alertTime) in alertTimes)
+                {
+                    <span>From @source at @alertTime.ToString("yyyy-MM-dd HH:mm:ss")</span><br />
+                }
+            }
+            <br /><input type="button" class="btn btn-success" value="Hide" @onclick="() => ToggleAlert(alertCode)" />
+        </div>
+    }
+    <div class="row" style="direction: rtl">
+        <hr />
+        @AnswerCount()
+    </div>
+    <div class="row" style="direction: rtl; margin-bottom: 48px">
         @foreach((string group, HashSet<int> numbers) in parserService.Options.CallGroups)
         {
             <div class="col" style="border: 1px #ccc solid; margin: 4px; padding: 0">
@@ -19,26 +37,49 @@
             </div>
         }
     </div>
-    <div class="row">
-        @AnswerCount()
+
+    <div style="position:fixed;bottom:0;left:64px">
+        @foreach (int alertCode in parserService.Options.AlertCodes)
+        {
+            <input type="button" class="btn btn-danger" value="🚨 @alertCode" @onclick="() => ToggleAlert(alertCode)" />
+        }
     </div>
+
 </div>
 
 @code {
+
+private readonly HashSet<int> shownAlerts = new();
+private readonly Dictionary<int, List<(int, DateTimeOffset)>> alertCodeTimes = new();
 
 private void OnParserUpdated()
 {
     InvokeAsync(() => StateHasChanged());
 }
 
+private void OnAlertDial(int source, int target)
+{
+    List<(int, DateTimeOffset)>? alertTimes;
+    if (!alertCodeTimes.TryGetValue(target, out alertTimes))
+    {
+        alertTimes = new();
+        alertCodeTimes.Add(target, alertTimes);
+    }
+    alertTimes.Insert(0, (source, DateTimeOffset.Now));
+    shownAlerts.Add(target);
+    InvokeAsync(() => StateHasChanged());
+}
+
 protected override void OnInitialized()
 {
     parserService.OnParserUpdated += OnParserUpdated;
+    parserService.OnAlertDial += OnAlertDial;
 }
 
 public void Dispose()
 {
     parserService.OnParserUpdated -= OnParserUpdated;
+    parserService.OnAlertDial -= OnAlertDial;
 }
 
 private string AnswerCount()
@@ -48,5 +89,17 @@ private string AnswerCount()
 
     return $"Answered {answered} / {total} || {answered * 100.0f / total:f0}%";
 }
+
+private void ToggleAlert(int alertCode)
+{
+    if (shownAlerts.Contains(alertCode))
+    {
+        shownAlerts.Remove(alertCode);
+    } else {
+        shownAlerts.Add(alertCode);
+    }
+}
+
+private string AlertContainerClass(int alertCode) => shownAlerts.Contains(alertCode) ? "" : "collapse";
 
 }

@@ -8,6 +8,7 @@ namespace StenParser
     public class ParserService
     {
         public event Action? OnParserUpdated;
+        public event Action<int, int>? OnAlertDial;
 
         public StenParserOptions Options { get; private set; } = new();
         public Dictionary<int, DateTimeOffset> Answered { get; } = new();
@@ -90,18 +91,20 @@ namespace StenParser
                 logger.LogWarning("Couldn't parse target number from '{line}'", line);
             }
 
-            if (Options.AnswerCodes.Contains(target) && Answered.TryAdd(source, DateTimeOffset.UtcNow))
+            if (Options.AnswerCodes.Contains(target))
             {
-                OnParserUpdated?.Invoke();
-                SaveCurrentState();
-                logger.LogInformation("Call from '{source}' to '{target}'", source, target);
+                if (Answered.TryAdd(source, DateTimeOffset.UtcNow))
+                {
+                    OnParserUpdated?.Invoke();
+                    SaveCurrentState();
+                    logger.LogInformation("Call from '{source}' to '{target}'", source, target);
+                }
+                else
+                {
+                    logger.LogWarning("Duplicate call from '{source}' to '{target}'", source, target);
+                }
             }
-            else
-            {
-                logger.LogWarning("Duplicate call from '{source}' to '{target}'", source, target);
-            }
-
-            if (Options.BroadcastCodes.Contains(target))
+            else if (Options.BroadcastCodes.Contains(target))
             {
                 Answered.Clear();
                 lastBroadcastTime = DateTimeOffset.Now;
@@ -109,6 +112,11 @@ namespace StenParser
                 SaveCurrentState();
                 OnParserUpdated?.Invoke();
                 logger.LogInformation("Broadcast from '{source}' to '{target}'", source, target);
+            }
+            else if (Options.AlertCodes.Contains(target))
+            {
+                logger.LogWarning("Alert triggered from {Source} to {target}", source, target);
+                OnAlertDial?.Invoke(source, target);
             }
         }
 
