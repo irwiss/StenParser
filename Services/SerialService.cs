@@ -53,6 +53,10 @@ namespace StenParser
                         parserService.ParseLine(line);
                     }
                 }
+                catch (UnauthorizedAccessException ex)
+                {
+                    logger.LogError(ex.Message);
+                }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Serial: Exception.");
@@ -63,10 +67,9 @@ namespace StenParser
                 }
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    TimeSpan waitTime = TimeSpan.FromSeconds(10);
                     // wait before trying to reopen
-                    logger.LogInformation("Waiting {timespan} before retrying.", waitTime.ToString());
-                    await Task.Delay(waitTime, cancellationToken);
+                    logger.LogInformation("Waiting {WaitTime} before retrying.", parserService.Options.SerialRetryWaitTime);
+                    await Task.Delay(parserService.Options.SerialRetryWaitTime, cancellationToken);
                 }
             }
         }

@@ -9,36 +9,29 @@
 
         <div class="container @CollapseDebugClass">
             <div class="row">
+                <h3>Emulate serial inputs</h3>
                 <div class="col">
-                    <div class="container">
-                        <form role="form">
-                            <div class="row">
-                                <div class="col-xs-12">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" class="form-control" @bind="TestInput1" />
-                                        <div class="input-group-btn">
-                                            <button type="button" class="btn btn-primary" @onclick="SendTest1">Send</button>
-                                        </div><!-- /btn-group -->
-                                    </div><!-- /input-group -->
-                                </div><!-- /.col-xs-12 -->
-                            </div><!-- /.row -->
-                        </form>
-                        <form role="form">
-                            <div class="row">
-                                <div class="col-xs-12">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" class="form-control" @bind="TestInput2" />
-                                        <div class="input-group-btn">
-                                            <button type="button" class="btn btn-primary" @onclick="SendTest2">Send</button>
-                                        </div><!-- /btn-group -->
-                                    </div><!-- /input-group -->
-                                </div><!-- /.col-xs-12 -->
-                            </div><!-- /.row -->
-                        </form>
-                    </div>
+                    @for (int j = 0; j < inputs.Count; j++)
+                    {
+                        int i = j; // capture local
+                        <div class="container">
+                            <form role="form">
+                                <div class="row">
+                                    <div class="col-xs-12">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" @bind="inputs[i]" />
+                                            <div class="input-group-btn">
+                                                <button type="button" class="btn btn-primary" @onclick="() => parserService.ParseLine(inputs[i])">Send</button>
+                                            </div><!-- /btn-group -->
+                                        </div><!-- /input-group -->
+                                    </div><!-- /.col-xs-12 -->
+                                </div><!-- /.row -->
+                            </form>
+                        </div>
+                    }
                 </div>
                 <div class="col">
-                    <textarea rows="@recentLines" cols="40" style="overflow: scroll;">@recent</textarea>
+                    <textarea rows="@recentLines" cols="30" style="overflow: scroll;">@recent</textarea>
                 </div>
             </div>
         </div>
@@ -55,8 +48,12 @@ public string CollapseDebugClass => collapseDebug ? "collapse" : "";
 private int recentLines = 20;
 private static bool collapseDebug = true;
 private string recent = string.Empty;
-private string TestInput1 = "0507 F171 F104 0000 0000";
-private string TestInput2 = "0507 F333 F900 0000 0000";
+private static readonly List<string> inputs = new()
+{
+    "0507 F171 F104 0000 0000",
+    "0507 F333 F900 0000 0000",
+    "0507 F333 4090 0000 0000",
+};
 
 protected override void OnInitialized()
 {
@@ -71,16 +68,6 @@ protected override void OnInitialized()
 private void ToggleDebug()
 {
     collapseDebug = !collapseDebug;
-}
-
-private void SendTest1()
-{
-    parserService.ParseLine(TestInput1);
-}
-
-private void SendTest2()
-{
-    parserService.ParseLine(TestInput2);
 }
 
 }
