@@ -8,12 +8,12 @@
     @foreach (int alertCode in parserService.Options.AlertCodes)
     {
         <div class="alert alert-warning @AlertContainerClass(alertCode)" role="alert">
-            Last alerts for code @alertCode:<br/>
+            Last alerts for code @alertCode ( Only since @System.Diagnostics.Process.GetCurrentProcess().StartTime.ToString(parserService.Options.DateTimeFormat) ):<br/>
             @if (alertCodeTimes.TryGetValue(alertCode, out List<(int, DateTimeOffset)>? alertTimes))
             {
                 @foreach ((int source, DateTimeOffset alertTime) in alertTimes)
                 {
-                    <span>From @source at @alertTime.ToString("yyyy-MM-dd HH:mm:ss")</span><br />
+                    <span>From @source at @alertTime.ToString(parserService.Options.DateTimeFormat)</span><br />
                 }
             }
             <br /><input type="button" class="btn btn-success" value="Hide" @onclick="() => ToggleAlert(alertCode)" />

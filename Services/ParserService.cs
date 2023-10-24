@@ -114,7 +114,7 @@ namespace StenParser
             else if (Options.AlertCodes.Contains(target))
             {
                 try {
-                    File.AppendAllText(Options.AlertsLogFilename, $"Alert triggered from {source} to {target} at {DateTimeOffset.Now:yy-MM-dd HH:mm:ss}{Environment.NewLine}");
+                    File.AppendAllText(Options.AlertsLogFilename, $"Alert triggered from {source} to {target} at {DateTimeOffset.Now.ToString(Options.DateTimeFormat)}{Environment.NewLine}");
                     OnAlertDial?.Invoke(source, target);
                     logger.LogWarning("Alert triggered from {source} to {target}", source, target);
                 } catch (Exception ex) {
@@ -125,13 +125,18 @@ namespace StenParser
 
         private void SaveCurrentState()
         {
-            string res = $"Broadcast test to {lastBroadcastNum} started at {lastBroadcastTime:yy-MM-dd HH:mm:ss}\n\n";
-            foreach((int num, DateTimeOffset when) in Answered.OrderBy(x => x.Value)) {
-                res += $"{num} answered at {when.ToLocalTime():yy-MM-dd HH:mm:ss}\n";
+            string dateString = lastBroadcastTime.ToString("yyyy-MM-dd-HH-mm-ss");
+            string stateFilename = $"./broadcast-{dateString}-to-{lastBroadcastNum}.txt";
+            try {
+                string res = $"Broadcast test to {lastBroadcastNum} started at {lastBroadcastTime.ToString(Options.DateTimeFormat)}\n\n";
+                foreach((int num, DateTimeOffset when) in Answered.OrderBy(x => x.Value)) {
+                    res += $"{num} answered at {when.ToLocalTime().ToString(Options.DateTimeFormat)}\n";
+                }
+                res = res.Replace("\n", Environment.NewLine);
+                File.WriteAllText(stateFilename, res);
+            } catch (Exception ex) {
+                logger.LogError(ex, "Couldn't write to {stateFilename}", stateFilename);
             }
-            string dateString = lastBroadcastTime.ToString("yyyy-MM-dd HH-mm-ss");
-            res = res.Replace("\n", Environment.NewLine);
-            File.WriteAllText($"Broadcast {dateString} to {lastBroadcastNum}.txt", res);
         }
 
         public string GetNumberAlias(int number)

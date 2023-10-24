@@ -7,6 +7,7 @@ namespace StenParser
         public HashSet<int> BroadcastCodes { get; set; } = new();
         public HashSet<int> AnswerCodes { get; set; } = new();
         public HashSet<int> AlertCodes { get; set; } = new();
+        public string DateTimeFormat { get; set; } = "yyyy-MM-dd HH:mm:ss";
         public string AliasesFilename { get; set; } = string.Empty;
         public string AlertsLogFilename { get; set; } = string.Empty;
         public Dictionary<string, HashSet<int>> CallGroups { get; set; } = new();
