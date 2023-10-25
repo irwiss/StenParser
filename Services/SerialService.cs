@@ -57,6 +57,10 @@ namespace StenParser
                 {
                     logger.LogError(ex.Message);
                 }
+                catch (FileNotFoundException ex)
+                {
+                    logger.LogError("{Message} Available Ports: {Ports}", ex.Message, SerialPort.GetPortNames());
+                }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Serial: Exception.");
