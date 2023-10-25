@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Content Include="aliases.csv" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Start-StenParser.bat" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
