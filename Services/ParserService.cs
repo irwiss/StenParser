@@ -24,7 +24,16 @@ namespace StenParser
         {
             this.logger = logger;
             this.optionsMonitor = optionsMonitor;
+            this.optionsMonitor.OnChange(ReloadOptions);
 
+            ReloadOptions(this.optionsMonitor.CurrentValue);
+        }
+
+        private void ReloadOptions(StenParserOptions options)
+        {
+            Options = options;
+
+            NumberAliases.Clear();
             if (File.Exists(Options.AliasesFilename))
             {
                 using StreamReader reader = new(Options.AliasesFilename);
@@ -34,22 +43,17 @@ namespace StenParser
                     HasHeaderRecord = false,
                 };
                 using var csv = new CsvReader(reader, config);
-                NumberAliases = csv.GetRecords<NumberAliasModel>()
-                    .ToDictionary(x => x.Number, x => x.Alias);
+                foreach((int number, string alias) in csv.GetRecords<NumberAliasModel>())
+                {
+                    NumberAliases.Add(number, alias);
+                }
+                logger.LogInformation("Loaded {AliasCount} aliases from '{AliasesFilename}'.", NumberAliases.Count, Options.AliasesFilename);
             } else {
                 logger.LogWarning("'{AliasesFilename}' is missing, no number aliases loaded.", Options.AliasesFilename);
             }
 
-            this.optionsMonitor.OnChange(ReloadOptions);
-            ReloadOptions(this.optionsMonitor.CurrentValue);
-        }
-
-        private void ReloadOptions(StenParserOptions options)
-        {
-            Options = options;
-
-            logger.LogInformation("Listening for broadcast strings: {BroadcastCodes}", options.BroadcastCodes);
-            logger.LogInformation("Listening for expected answer strings: {AnswerCodes}", options.AnswerCodes);
+            logger.LogInformation("Listening for broadcast strings: {BroadcastCodes}", Options.BroadcastCodes);
+            logger.LogInformation("Listening for expected answer strings: {AnswerCodes}", Options.AnswerCodes);
 
             OnParserUpdated?.Invoke();
             logger.LogWarning("Configuration reloaded.");
@@ -153,5 +157,11 @@ namespace StenParser
         public int Number { get; set; }
         [CsvHelper.Configuration.Attributes.Index(1)]
         public string Alias { get; set; } = string.Empty;
+
+        internal void Deconstruct(out int number, out string alias)
+        {
+            number = Number;
+            alias = Alias;
+        }
     }
 }
