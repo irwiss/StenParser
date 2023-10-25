@@ -15,7 +15,8 @@ namespace StenParser
 
         public Task StartAsync(CancellationToken stoppingToken)
         {
-            logger.LogInformation("Serial Hosted Service starting.");
+            logger.LogInformation("SerialService starting.");
+            logger.LogInformation("Serial ports available: {PortNames}.", new object?[] { SerialPort.GetPortNames() });
             _ = Task.Run(() => StartReading(stoppingToken), stoppingToken);
             return Task.CompletedTask;
         }
