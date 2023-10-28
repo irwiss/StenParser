@@ -5,7 +5,7 @@
 
 <div class="page">
     <main>
-        <input type="button" class="btn btn-warning" style="position:fixed;bottom:0;left:0" value="🐛" @onclick="ToggleDebug" />
+        <input type="button" class="btn btn-warning no-print" style="position:fixed;bottom:0;left:0" value="🐛" @onclick="ToggleDebug" />
 
         <div class="container @CollapseDebugClass">
             <div class="row">
@@ -50,7 +50,7 @@ private static bool collapseDebug = true;
 private string recent = string.Empty;
 private static readonly List<string> inputs = new()
 {
-    "0507 F171 F104 0000 0000",
+    "0507 F171 FF84 0000 0000",
     "0507 F333 F900 0000 0000",
     "0507 F333 4090 0000 0000",
 };

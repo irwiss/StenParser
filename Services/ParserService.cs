@@ -14,11 +14,11 @@ namespace StenParser
         public Dictionary<int, DateTimeOffset> Answered { get; } = new();
         public Dictionary<int, string> NumberAliases { get; } = new();
         public List<string> RecentInputs { get; } = new();
+        public DateTimeOffset LastBroadcastTime { get; private set; } = DateTimeOffset.Now;
+        public int LastBroadcastNum { get; private set; } = 0;
 
         private readonly ILogger<ParserService> logger;
         private readonly IOptionsMonitor<StenParserOptions> optionsMonitor;
-        private DateTimeOffset lastBroadcastTime = DateTimeOffset.Now;
-        private int lastBroadcastNum = 0;
 
         public ParserService(ILogger<ParserService> logger, IOptionsMonitor<StenParserOptions> optionsMonitor)
         {
@@ -37,7 +37,7 @@ namespace StenParser
             if (File.Exists(Options.AliasesFilename))
             {
                 using StreamReader reader = new(Options.AliasesFilename);
-                var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+                CsvConfiguration config = new(CultureInfo.InvariantCulture)
                 {
                     Encoding = System.Text.Encoding.UTF8,
                     HasHeaderRecord = false,
@@ -109,8 +109,8 @@ namespace StenParser
             else if (Options.BroadcastCodes.Contains(target))
             {
                 Answered.Clear();
-                lastBroadcastTime = DateTimeOffset.Now;
-                lastBroadcastNum = target;
+                LastBroadcastTime = DateTimeOffset.Now;
+                LastBroadcastNum = target;
                 SaveCurrentState();
                 OnParserUpdated?.Invoke();
                 logger.LogInformation("Broadcast from '{source}' to '{target}'", source, target);
@@ -129,10 +129,10 @@ namespace StenParser
 
         private void SaveCurrentState()
         {
-            string dateString = lastBroadcastTime.ToString("yyyy-MM-dd-HH-mm-ss");
-            string stateFilename = $"./broadcast-{dateString}-to-{lastBroadcastNum}.txt";
+            string dateString = LastBroadcastTime.ToString("yyyy-MM-dd-HH-mm-ss");
+            string stateFilename = $"./broadcast-{dateString}-to-{LastBroadcastNum}.txt";
             try {
-                string res = $"Broadcast test to {lastBroadcastNum} started at {lastBroadcastTime.ToString(Options.DateTimeFormat)}\n\n";
+                string res = $"Broadcast test to {LastBroadcastNum} started at {LastBroadcastTime.ToString(Options.DateTimeFormat)}\n\n";
                 foreach((int num, DateTimeOffset when) in Answered.OrderBy(x => x.Value)) {
                     res += $"{num} answered at {when.ToLocalTime().ToString(Options.DateTimeFormat)}\n";
                 }

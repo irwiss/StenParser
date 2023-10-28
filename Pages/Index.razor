@@ -2,7 +2,7 @@
 
 @inject ParserService parserService
 
-<PageTitle>Index</PageTitle>
+<PageTitle>@GetPageTitle</PageTitle>
 
 <div class="container">
     @foreach (int alertCode in parserService.Options.AlertCodes)
@@ -20,7 +20,6 @@
         </div>
     }
     <div class="row" style="direction: rtl">
-        <hr />
         @AnswerCount()
     </div>
     <div class="row" style="direction: rtl; margin-bottom: 48px">
@@ -31,7 +30,7 @@
                 <div style="display: block; padding: 0px 8px;">
                     @foreach(int number in numbers)
                     {
-                        <div style="display: block; white-space: pre; color: @(parserService.Answered.ContainsKey(number) ? "green" : "gray")"><span style="font-family: monospace">@number.ToString().PadRight(4)</span> @parserService.GetNumberAlias(number)</div>
+                        <div class="@(parserService.Answered.ContainsKey(number) ? "code-answered" : "code-unanswered")" style="display: block; white-space: pre;"><span style="font-family: monospace">@number.ToString().PadRight(4)</span> @parserService.GetNumberAlias(number)</div>
                     }
                 </div>
             </div>
@@ -41,7 +40,7 @@
     <div style="position:fixed;bottom:0;left:64px">
         @foreach (int alertCode in parserService.Options.AlertCodes)
         {
-            <input type="button" class="btn btn-danger" value="🚨 @alertCode" @onclick="() => ToggleAlert(alertCode)" />
+            <input type="button" class="btn btn-danger no-print" value="🚨 @alertCode" @onclick="() => ToggleAlert(alertCode)" />
         }
     </div>
 
@@ -51,6 +50,16 @@
 
 private readonly HashSet<int> shownAlerts = new();
 private readonly Dictionary<int, List<(int, DateTimeOffset)>> alertCodeTimes = new();
+
+public string GetPageTitle
+{
+    get
+    {
+        return parserService.LastBroadcastNum != 0
+               ? $"{parserService.Options.PageTitle} {parserService.LastBroadcastNum} {parserService.LastBroadcastTime:yyyy-MM-dd-HH-mm-ss}"
+               : $"{parserService.Options.PageTitle}";
+    }
+}
 
 private void OnParserUpdated()
 {

@@ -13,6 +13,8 @@ builder.Host.UseSerilog((hostContext, services, loggerConfiguration) =>
         .ReadFrom.Configuration(configuration);
 });
 
+Log.Logger.Information("Working directory: {WorkingDirectory}", Directory.GetCurrentDirectory());
+
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();

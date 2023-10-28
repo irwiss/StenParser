@@ -10,6 +10,7 @@ namespace StenParser
         public string DateTimeFormat { get; set; } = "yyyy-MM-dd HH:mm:ss";
         public string AliasesFilename { get; set; } = "./aliases-default.csv";
         public string AlertsLogFilename { get; set; } = "./alerts-log-default.txt";
+        public string PageTitle { get; set; } = "StenParser";
         public Dictionary<string, HashSet<int>> CallGroups { get; set; } = new();
     }
 }

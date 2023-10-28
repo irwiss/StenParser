@@ -59,6 +59,24 @@ a, .btn-link {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
+
+.code-unanswered {
+    font-weight: normal;
+    color: gray;
+}
+
+.code-answered {
+    font-weight: bold;
+    color: green;
+}
+
+@media print
+{    
+    .no-print, .no-print *
+    {
+        display: none !important;
     }
+}
