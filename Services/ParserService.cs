@@ -55,6 +55,9 @@ namespace StenParser
             logger.LogInformation("Listening for broadcast strings: {BroadcastCodes}", Options.BroadcastCodes);
             logger.LogInformation("Listening for expected answer strings: {AnswerCodes}", Options.AnswerCodes);
 
+            // dummy broadcast from 0 resets the app to default state
+            Options.BroadcastCodes.Add(0);
+
             OnParserUpdated?.Invoke();
             logger.LogWarning("Configuration reloaded.");
         }

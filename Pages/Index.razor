@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 
 @inject ParserService parserService
 
@@ -37,7 +37,9 @@
         }
     </div>
 
-    <div style="position:fixed;bottom:0;left:64px">
+    <input type="button" class="btn btn-warning no-print" style="position:fixed;bottom:0;left:64px" value="🔄" @onclick="ResetBroadcast" />
+
+    <div style="position:fixed;bottom:0;left:128px">
         @foreach (int alertCode in parserService.Options.AlertCodes)
         {
             <input type="button" class="btn btn-danger no-print" value="🚨 @alertCode" @onclick="() => ToggleAlert(alertCode)" />
@@ -107,6 +109,12 @@ private void ToggleAlert(int alertCode)
     } else {
         shownAlerts.Add(alertCode);
     }
+}
+
+private void ResetBroadcast()
+{
+    // dummy broadcast from 0 resets the app to default state
+    parserService.ParseLine("0507 F171 FFF0 0000 0000");
 }
 
 private string AlertContainerClass(int alertCode) => shownAlerts.Contains(alertCode) ? "" : "collapse";
