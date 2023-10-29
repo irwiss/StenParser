@@ -66,11 +66,37 @@ a, .btn-link {
 .code-unanswered {
     font-weight: normal;
     color: gray;
+    display: block;
+    white-space: pre;
 }
 
 .code-answered {
     font-weight: bold;
     color: green;
+    display: block;
+    white-space: pre;
+}
+
+.code-number {
+    font-family: monospace;
+}
+
+.code-category {
+    border: 1px #ccc solid;
+    margin: 4px;
+    padding: 0px;
+}
+
+.code-category-title {
+    display: block;
+    padding: 8px 8px;
+    border-bottom: 2px cyan solid;
+    background-color: #444;
+}
+
+.code-category-contents {
+    display: block;
+    padding: 0px 8px;
 }
 
 @media print

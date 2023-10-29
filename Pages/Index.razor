@@ -23,14 +23,14 @@
         @AnswerCount()
     </div>
     <div class="row" style="direction: rtl; margin-bottom: 48px">
-        @foreach((string group, HashSet<int> numbers) in parserService.Options.CallGroups)
+        @foreach ((string group, HashSet<int> numbers) in parserService.Options.CallGroups)
         {
-            <div class="col" style="border: 1px #ccc solid; margin: 4px; padding: 0">
-                <div style="display: block; padding: 8px 8px; background-color: #eee;">@group</div>
-                <div style="display: block; padding: 0px 8px;">
-                    @foreach(int number in numbers)
+            <div class="col code-category">
+                <div class="code-category-title">@group</div>
+                <div class="code-category-contents">
+                    @foreach (int number in numbers)
                     {
-                        <div class="@(parserService.Answered.ContainsKey(number) ? "code-answered" : "code-unanswered")" style="display: block; white-space: pre;"><span style="font-family: monospace">@number.ToString().PadRight(4)</span> @parserService.GetNumberAlias(number)</div>
+                        <div class="@(parserService.Answered.ContainsKey(number) ? "code-answered" : "code-unanswered")"><span class="code-number">@number.ToString().PadRight(4)</span> @parserService.GetNumberAlias(number)</div>
                     }
                 </div>
             </div>
