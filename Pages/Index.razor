@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 
 @inject ParserService parserService
 
@@ -42,7 +42,7 @@
     <div style="position:fixed;bottom:0;left:128px">
         @foreach (int alertCode in parserService.Options.AlertCodes)
         {
-            <input type="button" class="btn btn-danger no-print" value="🚨 @alertCode" @onclick="() => ToggleAlert(alertCode)" />
+            <input type="button" class="btn btn-danger no-print" value="🚨 @parserService.GetNumberAlias(alertCode)" @onclick="() => ToggleAlert(alertCode)" />
         }
     </div>
 
